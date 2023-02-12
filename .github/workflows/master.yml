@@ -11,6 +11,8 @@ on:
 env:
    # See: https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions#upgrading-a-workflow-that-accesses-ghcrio
    IMAGE_NAME: 5etools-img
+   # FIXME(DEPLOY)
+   SITE_REPO_NAME: 5etools-mirror-1.github.io-alt
 
 concurrency:
    group: "release"
@@ -28,8 +30,10 @@ jobs:
 
          -  name: Upload Release
             # Add the files one-by-one in an effort to avoid timeouts
+            # Sleep between creating the release and adding files, as the release takes time to be created (?)
             run: |
                hub release create -m "${{ github.ref_name }}"$'\n\n'"Version ${{ github.ref_name }}" ${{ github.ref_name }}
+               sleep 10
                for f in $(find . -name 'img-${{ github.ref_name }}.*' -print); do hub release edit ${{ github.ref_name }} -m '' -a $f; done
             env:
                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -67,3 +71,25 @@ jobs:
                docker push $IMAGE_ID:$IMAGE_VERSION
                docker push $IMAGE_ID:latest
          # endregion
+
+   # See: https://github.com/orgs/community/discussions/26323
+   trigger-site-build:
+      runs-on: ubuntu-latest
+      needs: create-image
+      steps:
+         -  uses: actions/github-script@v6
+            with:
+               github-token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
+               script: |
+                  await github.rest.actions.createWorkflowDispatch({
+                     owner: "5etools-mirror-1",
+                     repo: "$SITE_REPO_NAME",
+                     workflow_id: "master.yml",
+                     ref: "${{ github.ref_name }}"
+                  })
+                  await github.rest.actions.createWorkflowDispatch({
+                     owner: "5etools-mirror-1",
+                     repo: "$SITE_REPO_NAME",
+                     workflow_id: "pages.yml",
+                     ref: "${{ github.ref_name }}"
+                  })
