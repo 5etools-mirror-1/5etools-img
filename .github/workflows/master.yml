@@ -81,15 +81,19 @@ jobs:
             with:
                github-token: ${{ secrets.GHA_WORKFLOW_TRIGGER }}
                script: |
+                  // FIXME(DEPLOY)
+                  console.log(process.env.SITE_REPO_NAME)
+                  console.log(context.ref)
+
                   await github.rest.actions.createWorkflowDispatch({
                      owner: "5etools-mirror-1",
-                     repo: "$SITE_REPO_NAME",
+                     repo: process.env.SITE_REPO_NAME,
                      workflow_id: "master.yml",
-                     ref: "${{ github.ref_name }}"
+                     ref: context.ref
                   })
                   await github.rest.actions.createWorkflowDispatch({
                      owner: "5etools-mirror-1",
-                     repo: "$SITE_REPO_NAME",
+                     repo: process.env.SITE_REPO_NAME,
                      workflow_id: "pages.yml",
-                     ref: "${{ github.ref_name }}"
+                     ref: context.ref
                   })
